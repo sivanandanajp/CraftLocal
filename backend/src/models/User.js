@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
+  // Authentication & Core Identity
   name: { 
     type: String, 
     required: [true, 'Please provide a name'] 
@@ -19,12 +20,25 @@ const UserSchema = new mongoose.Schema({
   },
   role: { 
     type: String, 
-    enum: ['buyer', 'seller'], 
+    enum: ['buyer', 'seller', 'creator'], 
     default: 'buyer' 
   },
+
+  // Profile Details
+  bio: { 
+    type: String, 
+    default: '' 
+  },
+  avatar: { 
+    type: String, 
+    default: '' 
+  },
+  phone: { 
+    type: String, 
+    default: '' 
+  },
+
   // Hyperlocal Location Format (GeoJSON)
-  // Default coordinates [0, 0] prevent signup validation crashes 
-  // when forms do not pass initial GPS data.
   location: {
     type: { 
       type: String, 
@@ -35,7 +49,16 @@ const UserSchema = new mongoose.Schema({
       type: [Number], 
       default: [0, 0] // [longitude, latitude]
     }
-  }
+  },
+
+  // Saved Shipping Addresses
+  savedAddresses: [{
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipCode: { type: String, required: true },
+    isDefault: { type: Boolean, default: false }
+  }]
 }, { 
   timestamps: true 
 });
