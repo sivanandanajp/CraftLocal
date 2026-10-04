@@ -1,39 +1,32 @@
-const express = require('express');
-const router = express.Router();
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 
-// Helper function to generate JWT Token
+// Helper function to generate signed JWT Token
 const generateToken = (id) => {
-  try {
-    return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', { expiresIn: '30d' });
-  } catch (error) {
-    throw new Error('Token generation failed');
-  }
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', {
+    expiresIn: '30d'
+  });
 };
 
+// @desc    Register new user
 // @route   POST /api/auth/register
-// @desc    Register a new user (Buyer or Creator)
 // @access  Public
-router.post('/register', async (req, res) => {
-  const { name, email, password, role, longitude, latitude } = req.body;
+exports.registerUser = async (req, res) => {
   try {
+    const { name, email, password, role } = req.body;
+
+    // Check if user already exists
     const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'User already exists' });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-    // Fallback to default [0, 0] if coordinates are omitted
-    const parsedLng = longitude ? parseFloat(longitude) : 0;
-    const parsedLat = latitude ? parseFloat(latitude) : 0;
-
+    // Create new user (location and profile fields use default values)
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'buyer',
-      location: {
-        type: 'Point',
-        coordinates: [parsedLng, parsedLat]
-      }
+      role: role || 'buyer'
     });
 
     res.status(201).json({
@@ -41,24 +34,24 @@ router.post('/register', async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      bio: user.bio,
-      avatar: user.avatar,
-      phone: user.phone,
       location: user.location,
       token: generateToken(user._id)
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+};
 
+// @desc    Authenticate user & return JWT token
 // @route   POST /api/auth/login
-// @desc    Authenticate user & return JWT Token
 // @access  Public
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+exports.loginUser = async (req, res) => {
   try {
+    const { email, password } = req.body;
+
     const user = await User.findOne({ email });
+
+    // Check if user exists and password matches
     if (user && (await user.matchPassword(password))) {
       res.json({
         _id: user._id,
@@ -78,28 +71,32 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+};
 
+// @desc    Get logged-in user profile
 // @route   GET /api/auth/profile
-// @desc    Get user profile details
-// @access  Private (Requires token)
-router.get('/profile', async (req, res) => {
+// @access  Private
+exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+};
 
+// @desc    Update user profile & addresses
 // @route   PUT /api/auth/profile
-// @desc    Update user profile or saved addresses
-// @access  Private (Requires token)
-router.put('/profile', async (req, res) => {
+// @access  Private
+exports.updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     user.name = req.body.name || user.name;
     user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
@@ -126,6 +123,4 @@ router.put('/profile', async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
-
-module.exports = router;
+};
