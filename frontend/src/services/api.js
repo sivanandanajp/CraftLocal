@@ -1,25 +1,49 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: '/api',
 });
 
-// Automatically attach JWT Token from LocalStorage to headers
-API.interceptors.request.use((config) => {
-  const savedUser = localStorage.getItem('craftlocal_user');
-  if (savedUser) {
-    try {
-      const parsedUser = JSON.parse(savedUser);
-      if (parsedUser.token) {
-        config.headers.Authorization = `Bearer ${parsedUser.token}`;
+// Request Interceptor to attach JWT token
+API.interceptors.request.use(
+  (config) => {
+    // 1. Try direct token key
+    let token = localStorage.getItem('token');
+
+    // 2. Fallback to user object saved in localStorage
+    if (!token) {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          token = parsed?.token;
+        } catch (e) {
+          console.error('Error parsing stored user:', e);
+        }
       }
-    } catch (error) {
-      console.error('Error parsing token from localStorage:', error);
     }
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor for handling global errors (e.g. 401 Unauthorized)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+);
 
 export default API;

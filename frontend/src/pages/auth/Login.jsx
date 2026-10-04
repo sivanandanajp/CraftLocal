@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { loginUser } from '../../services/authService';
+import React, { useState, useContext } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
-export default function Login() {
+export const Login = () => {
   const navigate = useNavigate();
+  const { login, loading, error, setError } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -12,188 +13,92 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+  const handleChange = (e) => {
+    if (error) setError(null);
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await loginUser({
+      await login({
         email: formData.email,
         password: formData.password,
       });
-
-      // Save login token
-      localStorage.setItem('token', response.token);
-
-      console.log('Login successful:', response);
-
-      // Go to profile after successful login
       navigate('/profile');
-    } catch (error) {
-      console.error('Login failed:', error);
-
-      alert(
-        error.response?.data?.message || 'Invalid email or password'
-      );
+    } catch (err) {
+      // Error handled by AuthContext
     }
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
-      <div className="mx-auto max-w-md">
+    <div className="min-h-screen bg-background text-on-surface flex flex-col justify-center items-center px-6 py-12">
+      <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl p-8 shadow-sm">
+        <h1 className="text-3xl font-bold text-center mb-2">Welcome Back</h1>
+        <p className="text-center text-on-surface-variant mb-6">
+          Sign in to your CraftLocal account
+        </p>
 
-        {/* Heading */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <span
-              className="material-symbols-outlined text-5xl text-primary"
-              aria-hidden="true"
-            >
-              location_on
-            </span>
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block font-semibold mb-1 text-sm">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              required
+              className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          <h1 className="font-headline text-3xl font-bold text-on-surface">
-            Welcome Back
-          </h1>
-
-          <p className="mt-2 text-sm text-on-surface-variant">
-            Sign in to continue shopping locally.
-          </p>
-        </div>
-
-        {/* Login Card */}
-        <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm sm:p-8">
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-semibold text-on-surface"
-              >
-                Email Address
-              </label>
-
+          <div>
+            <label className="block font-semibold mb-1 text-sm">Password</label>
+            <div className="relative">
               <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter your email"
-                autoComplete="email"
+                placeholder="Enter your password"
                 required
-                className="w-full rounded-lg border border-outline-variant bg-background px-4 py-3 text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full px-4 py-3 pr-12 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-semibold text-on-surface"
-                >
-                  Password
-                </label>
-
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-primary hover:text-primary-container"
-                  onClick={() => {
-                    console.log('Forgot password clicked');
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  required
-                  className="w-full rounded-lg border border-outline-variant bg-background px-4 py-3 pr-12 text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword((previous) => !previous)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant hover:text-primary"
-                  aria-label={
-                    showPassword
-                      ? 'Hide password'
-                      : 'Show password'
-                  }
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    aria-hidden="true"
-                  >
-                    {showPassword ? 'visibility_off' : 'visibility'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center gap-2">
-              <input
-                id="rememberMe"
-                name="rememberMe"
-                type="checkbox"
-                className="h-4 w-4 accent-primary"
-              />
-
-              <label
-                htmlFor="rememberMe"
-                className="text-sm text-on-surface-variant"
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
               >
-                Remember me
-              </label>
+                <span className="material-symbols-outlined text-xl">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
             </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary px-5 py-3 font-semibold text-on-primary transition hover:bg-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              Sign In
-            </button>
-          </form>
-
-          {/* Register Link */}
-          <div className="mt-6 border-t border-outline-variant/40 pt-6 text-center">
-            <p className="text-sm text-on-surface-variant">
-              Don't have an account?{' '}
-              <NavLink
-                to="/register"
-                className="font-bold text-primary hover:text-primary-container"
-              >
-                Create an account
-              </NavLink>
-            </p>
           </div>
 
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 mt-2 rounded-xl bg-primary text-on-primary font-bold text-base hover:bg-primary-container transition-colors disabled:opacity-50"
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="text-center mt-6 text-sm">
+          <span className="text-on-surface-variant">Don't have an account? </span>
+          <Link to="/signup" className="text-primary font-bold hover:underline">
+            Create Account
+          </Link>
         </div>
       </div>
     </div>
   );
-}
+};

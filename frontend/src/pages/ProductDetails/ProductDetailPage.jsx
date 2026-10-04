@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useCart } from "../../context/CartContext";
-import { useWishlist } from "../../context/WishlistContext";
 import ImageGallery from "./ImageGallery";
 import QuantitySelector from "./QuantitySelector";
 import ProductCard from "./ProductCard";
@@ -31,30 +28,17 @@ const recommendations = [
 
 export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { addItem } = useCart();
-  const { toggleItem, isSaved } = useWishlist();
-  const cartProduct = {
-    id,
-    title: product.title,
-    price: product.price,
-    image: product.images[0].src,
-    vendor: product.artisan.name,
-  };
 
   const handleAddToCart = () => {
-    addItem(cartProduct, quantity);
-    navigate('/cart');
+    // Connect to cart API later
   };
 
   const handleBuyNow = () => {
-    addItem(cartProduct, quantity);
-    navigate('/checkout');
+    // Connect to checkout flow later
   };
 
   const handleSave = () => {
-    toggleItem(cartProduct);
+    // Connect to wishlist API later
   };
 
   const handleShare = () => {
@@ -62,10 +46,7 @@ export default function ProductDetailPage() {
   };
 
   const handleFavoriteRec = (title) => {
-    const recommendation = recommendations.find((item) => item.title === title);
-    if (recommendation) {
-      toggleItem({ ...recommendation, id: `recommendation-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` });
-    }
+    // Connect to wishlist API later
   };
 
   return (
@@ -147,9 +128,9 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="mt-5 flex justify-center gap-6 border-t border-outline-variant pt-4 text-sm font-medium text-on-surface-variant">
-              <button className="flex items-center gap-2 transition hover:text-primary" onClick={handleSave} aria-pressed={isSaved(id)}>
-                <span className="material-symbols-outlined text-[18px]">{isSaved(id) ? 'favorite' : 'favorite_border'}</span>
-                {isSaved(id) ? 'Saved' : 'Save'}
+              <button className="flex items-center gap-2 transition hover:text-primary" onClick={handleSave}>
+                <span className="material-symbols-outlined text-[18px]">favorite_border</span>
+                Save
               </button>
               <button className="flex items-center gap-2 transition hover:text-primary" onClick={handleShare}>
                 <span className="material-symbols-outlined text-[18px]">share</span>
@@ -200,7 +181,6 @@ export default function ProductDetailPage() {
                 title={rec.title}
                 vendor={rec.vendor}
                 price={rec.price}
-                isSaved={isSaved(`recommendation-${rec.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)}
                 onFavorite={() => handleFavoriteRec(rec.title)}
               />
             ))}

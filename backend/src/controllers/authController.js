@@ -141,6 +141,18 @@ const updateUserProfile = async (req, res) => {
       user.savedAddresses = req.body.savedAddresses;
     }
 
+    // Safely parse and update geo coordinates if provided
+    if (req.body.longitude !== undefined && req.body.latitude !== undefined) {
+      const parsedLng = parseFloat(req.body.longitude);
+      const parsedLat = parseFloat(req.body.latitude);
+      if (!isNaN(parsedLng) && !isNaN(parsedLat)) {
+        user.location = {
+          type: 'Point',
+          coordinates: [parsedLng, parsedLat],
+        };
+      }
+    }
+
     const updatedUser = await user.save();
 
     res.json({
@@ -155,7 +167,8 @@ const updateUserProfile = async (req, res) => {
       location: updatedUser.location,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Update Profile Backend Error:', error);
+    res.status(500).json({ message: error.message || 'Failed to update user profile' });
   }
 };
 

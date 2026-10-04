@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext';
-import { useOrders } from '../../context/OrderContext';
 
 export default function PaymentSection({ checkoutData, onBack }) {
-  const { items, clearCart } = useCart();
-  const { placeOrder } = useOrders();
-  const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [loading, setLoading] = useState(false);
 
@@ -17,14 +11,8 @@ export default function PaymentSection({ checkoutData, onBack }) {
     // Simulate API call
     setTimeout(() => {
       setLoading(false);
-      const order = placeOrder({
-        items,
-        shippingAddress: checkoutData.shippingAddress,
-        deliveryMethod: checkoutData.deliveryMethod,
-        paymentMethod,
-      });
-      clearCart();
-      navigate('/orders', { state: { placedOrderId: order.id } });
+      alert('Order placed successfully!');
+      console.log('Final Order Data:', { ...checkoutData, paymentMethod });
     }, 1500);
   };
 

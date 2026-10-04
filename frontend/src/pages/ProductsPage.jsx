@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import ProductCard from './ProductDetails/ProductCard';
-import { useWishlist } from '../context/WishlistContext';
 
 const products = [
   {
@@ -60,8 +59,6 @@ const products = [
 ];
 
 export default function ProductsPage() {
-  const { toggleItem, isSaved } = useWishlist();
-
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
       <div className="mb-8 flex items-end justify-between gap-4">
@@ -70,10 +67,10 @@ export default function ProductsPage() {
           <h1 className="mt-2 text-3xl font-bold text-on-surface md:text-4xl">Handcrafted finds</h1>
         </div>
         <Link
-          to="/cart"
+          to="/checkout"
           className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary"
         >
-          View cart
+          Go to checkout
         </Link>
       </div>
 
@@ -86,8 +83,6 @@ export default function ProductsPage() {
               title={product.title}
               vendor={product.vendor}
               price={product.price}
-              isSaved={isSaved(product.id)}
-              onFavorite={() => toggleItem(product)}
             />
           </Link>
         ))}

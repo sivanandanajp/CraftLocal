@@ -1,6 +1,6 @@
+const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
-const mongoose = require('mongoose');
 const Product = require('./models/Product');
 
 // Load env variables
@@ -41,25 +41,18 @@ const sampleProducts = [
 
 const seedDB = async () => {
   try {
-    if (!process.env.MONGO_URI) {
-      throw new Error('MONGO_URI is not configured');
-    }
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB...");
-
-    const existingProducts = await Product.find({ title: { $in: sampleProducts.map((product) => product.title) } }).select('title');
-    const existingTitles = new Set(existingProducts.map((product) => product.title));
-    const productsToInsert = sampleProducts.filter((product) => !existingTitles.has(product.title));
-    if (productsToInsert.length > 0) {
-      await Product.insertMany(productsToInsert);
-    }
     
-    console.log(`Seeded ${productsToInsert.length} sample product(s).`);
+    // Clear out old records and insert new seed data
+    await Product.deleteMany({});
+    await Product.insertMany(sampleProducts);
+    
+    console.log("🚀 Sample Products Seeded Successfully!");
+    process.exit(0);
   } catch (error) {
     console.error("❌ Seeding Failed:", error);
-    process.exitCode = 1;
-  } finally {
-    await mongoose.disconnect();
+    process.exit(1);
   }
 };
 

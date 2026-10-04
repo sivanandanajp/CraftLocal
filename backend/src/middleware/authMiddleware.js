@@ -4,31 +4,33 @@ const User = require('../models/User');
 const protect = async (req, res, next) => {
   let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Fetch user context and attach it to the request object
+
+      // Decode token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'craftlocal_secret_key');
+
+      // Attach user object without password
       req.user = await User.findById(decoded.id).select('-password');
+
+      if (!req.user) {
+        return res.status(401).json({ message: 'User authorization failed: User no longer exists' });
+      }
+
       return next();
     } catch (error) {
-      return res.status(401).json({ message: 'Not authorized, token failed' });
+      console.error('JWT Auth Middleware Error:', error);
+      return res.status(401).json({ message: 'Not authorized, token validation failed' });
     }
   }
 
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token provided' });
   }
 };
 
-// Check if user is a seller
-const isSeller = (req, res, next) => {
-  if (req.user && req.user.role === 'seller') {
-    next();
-  } else {
-    res.status(403).json({ message: 'Access denied. Sellers only.' });
-  }
-};
-
-module.exports = { protect, isSeller };
+module.exports = { protect };
