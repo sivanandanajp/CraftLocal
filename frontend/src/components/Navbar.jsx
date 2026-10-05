@@ -1,6 +1,10 @@
 import { NavLink } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 export function Navbar() {
+  const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const navLinkClass = ({ isActive }) =>
     `font-semibold transition-colors ${
       isActive
@@ -44,11 +48,11 @@ export function Navbar() {
           </NavLink>
 
           <NavLink to="/wishlist" className={navLinkClass}>
-            Wishlist
+            Wishlist{wishlistCount > 0 ? ` (${wishlistCount})` : ''}
           </NavLink>
 
           <NavLink to="/cart" className={navLinkClass}>
-            Cart
+            Cart{cartCount > 0 ? ` (${cartCount})` : ''}
           </NavLink>
 
           <NavLink to="/checkout" className={navLinkClass}>

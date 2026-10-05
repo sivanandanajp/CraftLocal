@@ -3,7 +3,10 @@ const jwt = require('jsonwebtoken');
 
 // Helper function to generate signed JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d'
   });
 };
@@ -13,7 +16,14 @@ const generateToken = (id) => {
 // @access  Public
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, longitude, latitude } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'name, email, and password are required' });
+    }
+    if (role && !['buyer', 'creator'].includes(role)) {
+      return res.status(400).json({ message: 'role must be buyer or creator' });
+    }
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -26,7 +36,10 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'buyer'
+      role: role || 'buyer',
+      ...(longitude !== undefined && latitude !== undefined && {
+        location: { type: 'Point', coordinates: [Number(longitude), Number(latitude)] }
+      })
     });
 
     res.status(201).json({
@@ -38,7 +51,8 @@ exports.registerUser = async (req, res) => {
       token: generateToken(user._id)
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    const statusCode = error.code === 11000 ? 409 : error.name === 'ValidationError' ? 400 : 500;
+    res.status(statusCode).json({ message: error.message });
   }
 };
 
@@ -48,6 +62,10 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'email and password are required' });
+    }
 
     const user = await User.findOne({ email });
 

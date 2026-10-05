@@ -1,131 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-
-// Helper function to generate JWT Token
-const generateToken = (id) => {
-  try {
-    return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', { expiresIn: '30d' });
-  } catch (error) {
-    throw new Error('Token generation failed');
-  }
-};
+const { registerUser, loginUser, getUserProfile, updateUserProfile } = require('../controllers/authController');
+const { protect } = require('../middleware/authMiddleware');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user (Buyer or Creator)
 // @access  Public
-router.post('/register', async (req, res) => {
-  const { name, email, password, role, longitude, latitude } = req.body;
-  try {
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'User already exists' });
-
-    // Fallback to default [0, 0] if coordinates are omitted
-    const parsedLng = longitude ? parseFloat(longitude) : 0;
-    const parsedLat = latitude ? parseFloat(latitude) : 0;
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: role || 'buyer',
-      location: {
-        type: 'Point',
-        coordinates: [parsedLng, parsedLat]
-      }
-    });
-
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      bio: user.bio,
-      avatar: user.avatar,
-      phone: user.phone,
-      location: user.location,
-      token: generateToken(user._id)
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.post('/register', registerUser);
 
 // @route   POST /api/auth/login
 // @desc    Authenticate user & return JWT Token
 // @access  Public
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        bio: user.bio,
-        avatar: user.avatar,
-        phone: user.phone,
-        savedAddresses: user.savedAddresses,
-        location: user.location,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.post('/login', loginUser);
 
 // @route   GET /api/auth/profile
 // @desc    Get user profile details
 // @access  Private (Requires token)
-router.get('/profile', async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.get('/profile', protect, getUserProfile);
 
 // @route   PUT /api/auth/profile
 // @desc    Update user profile or saved addresses
 // @access  Private (Requires token)
-router.put('/profile', async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    user.name = req.body.name || user.name;
-    user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
-    user.avatar = req.body.avatar || user.avatar;
-    user.phone = req.body.phone || user.phone;
-
-    if (req.body.savedAddresses) {
-      user.savedAddresses = req.body.savedAddresses;
-    }
-
-    const updatedUser = await user.save();
-
-    res.json({
-      _id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      bio: updatedUser.bio,
-      avatar: updatedUser.avatar,
-      phone: updatedUser.phone,
-      savedAddresses: updatedUser.savedAddresses,
-      location: updatedUser.location
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.put('/profile', protect, updateUserProfile);
 
 module.exports = router;

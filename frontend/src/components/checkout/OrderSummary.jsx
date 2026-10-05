@@ -1,14 +1,11 @@
 import React from 'react';
+import { useCart } from '../../context/CartContext';
 
 export default function OrderSummary({ deliveryMethod = 'standard' }) {
-  // Sample Cart Data
-  const items = [
-    { id: 1, name: 'Wireless Headphones', price: 99.0, quantity: 1 },
-    { id: 2, name: 'Ergonomic Mouse', price: 49.0, quantity: 2 },
-  ];
+  const { items } = useCart();
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingFee = deliveryMethod === 'express' ? 15.0 : 5.0;
+  const shippingFee = items.length === 0 ? 0 : deliveryMethod === 'express' ? 15.0 : 5.0;
   const tax = subtotal * 0.08;
   const grandTotal = subtotal + shippingFee + tax;
 
@@ -20,7 +17,7 @@ export default function OrderSummary({ deliveryMethod = 'standard' }) {
         {items.map((item) => (
           <div key={item.id} className="flex justify-between text-sm">
             <div>
-              <p className="font-medium text-gray-800">{item.name}</p>
+              <p className="font-medium text-gray-800">{item.title}</p>
               <p className="text-gray-500">Qty: {item.quantity}</p>
             </div>
             <p className="font-semibold text-gray-700">${(item.price * item.quantity).toFixed(2)}</p>
