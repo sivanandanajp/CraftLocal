@@ -3,44 +3,58 @@ const jwt = require('jsonwebtoken');
 
 // Helper function to generate signed JWT Token
 const generateToken = (id) => {
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured');
-  }
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', {
+    expiresIn: '30d',
   });
 };
 
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
-exports.registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, longitude, latitude } = req.body;
+    const { name, fullName, email, password, role, longitude, latitude } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'name, email, and password are required' });
-    }
-    if (role && !['buyer', 'creator'].includes(role)) {
-      return res.status(400).json({ message: 'role must be buyer or creator' });
+    // Accept either 'name' or 'fullName' from frontend
+    const userName = name || fullName;
+
+    // 1. Basic field validation
+    if (!userName || !email || !password) {
+      return res.status(400).json({ 
+        message: 'Please provide name, email, and password' 
+      });
     }
 
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
+    // 2. Check if user already exists
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ 
+        message: 'User already exists with this email address' 
+      });
     }
 
-    // Create new user (location and profile fields use default values)
-    const user = await User.create({
-      name,
-      email,
+    // 3. Fallback coordinates [0, 0] if omitted
+    const parsedLng = !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : 0;
+    const parsedLat = !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : 0;
+
+    // 4. Build user data payload
+    const userData = {
+      name: userName,
+      email: email.toLowerCase(),
       password,
-      role: role || 'buyer',
-      ...(longitude !== undefined && latitude !== undefined && {
-        location: { type: 'Point', coordinates: [Number(longitude), Number(latitude)] }
-      })
-    });
+      role: role ? role.toLowerCase() : 'buyer',
+    };
+
+    // Safely attach location only if coordinates exist or schema expects it
+    if (longitude !== undefined || latitude !== undefined) {
+      userData.location = {
+        type: 'Point',
+        coordinates: [parsedLng, parsedLat],
+      };
+    }
+
+    // 5. Create user record
+    const user = await User.create(userData);
 
     res.status(201).json({
       _id: user._id,
@@ -48,28 +62,30 @@ exports.registerUser = async (req, res) => {
       email: user.email,
       role: user.role,
       location: user.location,
-      token: generateToken(user._id)
+      token: generateToken(user._id),
     });
   } catch (error) {
-    const statusCode = error.code === 11000 ? 409 : error.name === 'ValidationError' ? 400 : 500;
-    res.status(statusCode).json({ message: error.message });
+    console.error('Registration Error:', error);
+    res.status(500).json({ 
+      message: error.message || 'Server error during registration' 
+    });
   }
 };
 
 // @desc    Authenticate user & return JWT token
 // @route   POST /api/auth/login
 // @access  Public
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'email and password are required' });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
-    // Check if user exists and password matches
+    // Verify user exists and check password hash match
     if (user && (await user.matchPassword(password))) {
       res.json({
         _id: user._id,
@@ -81,7 +97,7 @@ exports.loginUser = async (req, res) => {
         phone: user.phone,
         savedAddresses: user.savedAddresses,
         location: user.location,
-        token: generateToken(user._id)
+        token: generateToken(user._id),
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -94,7 +110,7 @@ exports.loginUser = async (req, res) => {
 // @desc    Get logged-in user profile
 // @route   GET /api/auth/profile
 // @access  Private
-exports.getUserProfile = async (req, res) => {
+const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
@@ -109,7 +125,7 @@ exports.getUserProfile = async (req, res) => {
 // @desc    Update user profile & addresses
 // @route   PUT /api/auth/profile
 // @access  Private
-exports.updateUserProfile = async (req, res) => {
+const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -136,9 +152,19 @@ exports.updateUserProfile = async (req, res) => {
       avatar: updatedUser.avatar,
       phone: updatedUser.phone,
       savedAddresses: updatedUser.savedAddresses,
-      location: updatedUser.location
+      location: updatedUser.location,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// Export both naming conventions to avoid routing crashes
+module.exports = {
+  register: registerUser,
+  registerUser,
+  login: loginUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
 };
