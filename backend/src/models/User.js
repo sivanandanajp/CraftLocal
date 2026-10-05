@@ -1,12 +1,58 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+<<<<<<< HEAD
 const UserSchema = new mongoose.Schema(
   {
     // Authentication & Core Identity
     name: {
       type: String,
       required: [true, 'Please provide a name'],
+=======
+const UserSchema = new mongoose.Schema({
+  // Authentication & Core Identity
+  name: { 
+    type: String, 
+    required: [true, 'Please provide a name'] 
+  },
+  email: { 
+    type: String, 
+    required: [true, 'Please provide an email'], 
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: { 
+    type: String, 
+    required: [true, 'Please provide a password'] 
+  },
+  role: { 
+    type: String, 
+    enum: ['buyer', 'creator'],
+    default: 'buyer' 
+  },
+
+  // Profile Details
+  bio: { 
+    type: String, 
+    default: '' 
+  },
+  avatar: { 
+    type: String, 
+    default: '' 
+  },
+  phone: { 
+    type: String, 
+    default: '' 
+  },
+
+  // Hyperlocal Location Format (GeoJSON)
+  location: {
+    type: { 
+      type: String, 
+      enum: ['Point'], 
+      default: 'Point' 
+>>>>>>> b60eef8 (wishlist,order delivery etc)
     },
 
     email: {

@@ -5,6 +5,11 @@ const jwt = require('jsonwebtoken');
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', {
     expiresIn: '30d',
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d'
   });
 };
 
@@ -14,6 +19,14 @@ const generateToken = (id) => {
 const registerUser = async (req, res) => {
   try {
     const { name, fullName, email, password, role, longitude, latitude } = req.body;
+    const { name, email, password, role, longitude, latitude } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'name, email, and password are required' });
+    }
+    if (role && !['buyer', 'creator'].includes(role)) {
+      return res.status(400).json({ message: 'role must be buyer or creator' });
+    }
 
     // Accept either 'name' or 'fullName' from frontend
     const userName = name || fullName;
@@ -55,6 +68,11 @@ const registerUser = async (req, res) => {
 
     // 5. Create user record
     const user = await User.create(userData);
+      role: role || 'buyer',
+      ...(longitude !== undefined && latitude !== undefined && {
+        location: { type: 'Point', coordinates: [Number(longitude), Number(latitude)] }
+      })
+    });
 
     res.status(201).json({
       _id: user._id,
@@ -69,6 +87,8 @@ const registerUser = async (req, res) => {
     res.status(500).json({ 
       message: error.message || 'Server error during registration' 
     });
+    const statusCode = error.code === 11000 ? 409 : error.name === 'ValidationError' ? 400 : 500;
+    res.status(statusCode).json({ message: error.message });
   }
 };
 
@@ -82,6 +102,10 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
+      return res.status(400).json({ message: 'email and password are required' });
+    }
+
+    const user = await User.findOne({ email });
 
     const user = await User.findOne({ email: email.toLowerCase() });
 
