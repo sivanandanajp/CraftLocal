@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Health check
 app.get('/', (req, res) => {
@@ -34,10 +36,14 @@ app.get('/', (req, res) => {
 
 const PORT = 5000;
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🔥 Server running on port ${PORT}`);
-});
-
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB before accepting requests.
+connectDB()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🔥 Server running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Unable to connect to MongoDB:', error);
+    process.exit(1);
+  });

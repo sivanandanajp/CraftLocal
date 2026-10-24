@@ -1,64 +1,503 @@
-import React from 'react';
-import { Navbar } from '../components/Navbar';
-import { BottomNav } from '../components/BottomNav';
-import { ProductGallery } from '../components/ProductGallery';
-import { ProductInfo } from '../components/ProductInfo';
-import { ArtisanBioCard } from '../components/ArtisanBioCard';
-import { RecommendedProducts } from '../components/RecommendedProducts';
 
-// Mock Data
-const PRODUCT_DATA = {
-  title: "Hand-Thrown Terracotta Bowl",
-  price: 45.0,
-  distance: "1.2km",
-  images: [
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuBfqbi2rR5TJ-jxKZHAPh3Z8Wkw9AswO-UesdNI0xPW3i_YAQWRHZKDt5Dm2LGU9hhX2q4pJb3nsm1THLI1FeVwe9d7EmRjnWgTfuNYI-V8JPFXwvbyfYZKSbGXB7fO2_KQulxi-zOwLDDIujMa26gWieBEHBgXxXPnKi0ChuhF7CVCHvd__5qBYejaWrweJRiDR377JXgs4N9Nj45a28bXwL3AnuWqNG-ZO9zXMxPp68t798XxUaHu",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuAJICaO-8XzyCQYoL6CODjCqeZ7wFqaM9tdEIyHChKZhxc2ibHvfvymRViujTF4AcydW2Y-7QF2eIUshk83A85ImqP6B6DwXEV9NBW823yC4hnq-RgTp7oh7RQUfJ6xnN2xwbLFaN17WppzbCk6VtMe_fvdc6YRduNKCt01i444tzOZ139IQhmfhy0kfaNcR5XeLk1vO6IY9JUHP-YVqVWG2aWc4FW2rQQauSt2mWxWOj3SrXcufSSH",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCR2n_ONgYGnVVfMrbHdJ_OL2yJGc_DOzQCnelqkPiflKtkWFmuqRAy7HEhb4mK9tpWG5n7DewqKXcqxxR-SROpH_qBhsS0fnrr2blKrlILexwW1wIbdRWjppBoYLv53MBfZ3OWHi8y1pZdxbdfQ6uCeCJA52kzcwqKxxJ_u_LjOb-G3xYY_cVnjTj86QPIqj0Fa_AeZkOWQ3vt5-02REuLahyTkwGCZH8cWLRT5Arg_MjXQHipOmYW"
-  ],
-  artisan: {
-    name: "Studio Terra",
-    location: "Portland, OR",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCkJaZ1LQ7t9-_WeN8kxBE0HYo1CLCl2dCKL4WBZI54M3ISu-hZQai7KPVelUbD1FKOWuCP3f1ByoR-jBcd1VIhDzZo-zVRsSB-BpLP-YtnluZsI1gME9fCfWaINuoL5yFuMNeb-ogY2FzXBhCjNNx5ft93dNPNEeNsZFyxIkTkfjFMIs0c4R-j8fW-iNGqPOrKuPZ0gNGlFWt_0comCOz1kO89yOj00dZ1puuCsVeMuFTvsRtK1NaP",
-    bio: "Dedicated to preserving traditional pottery techniques, Studio Terra crafts functional art pieces designed for everyday living. Each piece is thrown by hand and glazed with custom-mixed finishes reflecting the local landscape."
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+
+import { useCart } from '../../context/CartContext';
+import { ProductGallery } from '../../components/ProductGallery';
+import { ProductInfo } from '../../components/ProductInfo';
+import { RecommendedProduct } from '../../components/RecommendedProduct';
+import { fetchRecommendations } from '../../services/recommendationService';
+
+const API_URL = 'http://localhost:5000/api/products';
+
+const getId = (product) =>
+  String(product?._id || product?.id || '');
+
+const getName = (product) =>
+  product?.name ||
+  product?.title ||
+  product?.productName ||
+  'Handcrafted piece';
+
+const getImage = (product) => {
+  const image =
+    product?.image ||
+    product?.imageUrl ||
+    product?.thumbnail ||
+    product?.images?.[0];
+
+  if (typeof image === 'string') return image;
+
+  if (image && typeof image === 'object') {
+    return image.url || image.secure_url || image.src || '';
   }
+
+  return '';
 };
 
-const RECOMMENDED_ITEMS = [
-  { id: 1, title: "Speckled Morning Mug", seller: "Earth & Kiln", price: 32.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCPl2RlWMS9zMyPArNDTX9W1MgwOv95LHRiD_xzbRLwMzmvTpIQBPh6V_kaQFAZnyQPiuKajHGuFvK4nXLrZsp6TRo2bRVf20FIhkBF5Bf6_6rYo3ekvqhJaRn_qKoXPf_hQzKyUGQs5jq0PbpyHGNT9NZ7evHS_PPgz9RNFztC7WCX5NzwMVixbBI0CsLSe_wR7b_IklDzot1LKKfLcBW_vt8uGbViNXrFX11suYD9AhjymddMtXnt" },
-  { id: 2, title: "Carved Serving Spoons", seller: "TimberWorks", price: 45.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC1EhN5O1RCnGhM9mD6IJLdlwuVoepZpv5BmIeDTgaQLuLuESXvf2ee2oDUxlgvx9vHPjETqFNiXDlHsybZmrFbMUsGOWqMctkyeA066XJT6x7eW68YJar3ajyTPvetGBL5mSpApqkLS_sS6fopjwsi1VkSL_23qu2FbTyYu1RxzlgeVSkZJSgBsY-ySWf0n0KO8vsVvjvZM4Kz_oVOgI-vzGy4d1zMk_7lGQms3v9VM-OSLOIvkx5L" },
-  { id: 3, title: "Cedarwood Soy Candle", seller: "Lumina Local", price: 28.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzlgtmfEd--wX8iYxs33GsgQ0itlVMSiKHSCDmaSAVhCLe6fM5ICbSBlaFFF9VrZ4D4p8LQ6QBjEctJ3D8RebvHL42Q5z2dtTkv5YatUEXKr_E_319D1YMj22qf4l-YJgPkUNtR21oSC39JQWRMDbOT3MAkme2yE-KZ1K_lt-vT2TpJ2XnTukjBdzJj_23RlS8PPqiJXgg7vDhKWFoYtX7H6Sx5tvKa8fP4M0YP4Z9TC6PRnSqoB1K" }
-];
+const getImages = (product) => {
+  const images = [
+    product?.image,
+    product?.imageUrl,
+    product?.thumbnail,
+    ...(Array.isArray(product?.images) ? product.images : []),
+  ]
+    .map((image) => {
+      if (typeof image === 'string') return image;
 
-export const ProductDetailPage = () => {
+      if (image && typeof image === 'object') {
+        return image.url || image.secure_url || image.src || '';
+      }
+
+      return '';
+    })
+    .filter(Boolean);
+
+  return [...new Set(images)];
+};
+
+const getCategory = (product) => {
+  const category = product?.category;
+
+  if (typeof category === 'string') return category;
+
+  if (category && typeof category === 'object') {
+    return category.name || category.title || '';
+  }
+
+  return '';
+};
+
+const getArtisan = (product) =>
+  product?.artisan?.name ||
+  product?.seller?.name ||
+  product?.creator?.name ||
+  product?.makerName ||
+  product?.vendor ||
+  product?.brand ||
+  '';
+
+async function readResponse(response) {
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message || 'Unable to load this product.'
+    );
+  }
+
+  return data;
+}
+
+function unwrapProduct(data) {
+  if (data?.product) return data.product;
+
+  if (data?.data?.product) return data.data.product;
+
+  if (data?.data && !Array.isArray(data.data)) {
+    return data.data;
+  }
+
+  return data;
+}
+
+function getProductList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.products)) return data.products;
+  if (Array.isArray(data?.data?.products)) {
+    return data.data.products;
+  }
+  if (Array.isArray(data?.data)) return data.data;
+
+  return [];
+}
+
+function LoadingState() {
   return (
-    <div className="bg-background text-on-background min-h-screen pt-[72px] pb-[80px] md:pb-0">
-      <Navbar />
+    <main className="min-h-screen bg-[#FAF7F1] px-5 py-12 text-[#38291F] sm:px-8">
+      <div className="mx-auto max-w-7xl animate-pulse">
+        <div className="mb-8 h-3 w-48 bg-[#E8DDD0]" />
 
-      <main className="max-w-[1280px] mx-auto px-4 md:px-10 py-6 md:py-12">
-        {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-1 text-on-surface-variant text-xs mb-8 font-medium">
-          <a className="hover:text-primary transition-colors" href="#">Home</a>
-          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <a className="hover:text-primary transition-colors" href="#">Pottery</a>
-          <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          <span className="text-primary">{PRODUCT_DATA.title}</span>
+        <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr]">
+          <div className="aspect-[4/3] bg-[#EEE5D9]" />
+
+          <div className="space-y-5 py-4">
+            <div className="h-3 w-24 bg-[#E8DDD0]" />
+            <div className="h-10 w-4/5 bg-[#E8DDD0]" />
+            <div className="h-6 w-28 bg-[#E8DDD0]" />
+            <div className="h-24 bg-[#E8DDD0]" />
+            <div className="h-12 bg-[#E8DDD0]" />
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function ProductDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
+  const [product, setProduct] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [cartMessage, setCartMessage] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProduct() {
+      setLoading(true);
+      setError('');
+      setProduct(null);
+      setRecommendations([]);
+      setCartMessage('');
+
+      try {
+        let currentProduct = null;
+
+        // Try the individual product endpoint first.
+        try {
+          const response = await fetch(
+            `${API_URL}/${encodeURIComponent(id)}`,
+            { signal: controller.signal }
+          );
+
+          const data = await readResponse(response);
+          const candidate = unwrapProduct(data);
+
+          if (
+            candidate &&
+            !Array.isArray(candidate) &&
+            getId(candidate) === String(id)
+          ) {
+            currentProduct = candidate;
+          }
+        } catch (requestError) {
+          if (requestError.name === 'AbortError') {
+            throw requestError;
+          }
+        }
+
+        // Fall back to the collection endpoint.
+        if (!currentProduct) {
+          const response = await fetch(API_URL, {
+            signal: controller.signal,
+          });
+
+          const data = await readResponse(response);
+
+          currentProduct = getProductList(data).find(
+            (item) => getId(item) === String(id)
+          );
+        }
+
+        if (controller.signal.aborted) return;
+
+        if (
+          !currentProduct ||
+          getId(currentProduct) !== String(id)
+        ) {
+          throw new Error('This product could not be found.');
+        }
+
+        setProduct(currentProduct);
+
+        // Recommendations are optional and should not break
+        // the main product detail page if loading fails.
+        try {
+          const recommendedProducts = await fetchRecommendations(
+            currentProduct,
+            {
+              signal: controller.signal,
+              limit: 8,
+            }
+          );
+
+          if (!controller.signal.aborted) {
+            setRecommendations(recommendedProducts);
+          }
+        } catch (recommendationError) {
+          if (recommendationError.name !== 'AbortError') {
+            console.warn(
+              'Could not load recommendations:',
+              recommendationError
+            );
+          }
+        }
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') {
+          setError(
+            requestError.message || 'Something went wrong.'
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (id) {
+      loadProduct();
+    } else {
+      setError('No product was selected.');
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, [id]);
+
+  const handleAddToCart = (quantity) => {
+    if (!product) return;
+
+    try {
+      addToCart(
+        {
+          ...product,
+          _id: getId(product),
+          name: getName(product),
+          price: Number(product.price),
+          image: getImage(product),
+          category: getCategory(product),
+        },
+        quantity
+      );
+
+      setCartMessage('Added to your cart.');
+    } catch (cartError) {
+      setCartMessage(
+        cartError.message ||
+          'This item could not be added to your cart.'
+      );
+    }
+  };
+
+  const handleBuyNow = (quantity) => {
+    if (!product) return;
+
+    try {
+      addToCart(
+        {
+          ...product,
+          _id: getId(product),
+          name: getName(product),
+          price: Number(product.price),
+          image: getImage(product),
+          category: getCategory(product),
+        },
+        quantity
+      );
+
+      navigate('/checkout');
+    } catch (cartError) {
+      setCartMessage(
+        cartError.message ||
+          'This item could not be added to your cart.'
+      );
+    }
+  };
+
+  if (loading) return <LoadingState />;
+
+  if (error || !product) {
+    return (
+      <main className="min-h-[60vh] bg-[#FAF7F1] px-5 py-16 text-center text-[#38291F] sm:px-8">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+          CraftLocal collection
+        </p>
+
+        <h1 className="mt-4 font-headline text-3xl sm:text-4xl">
+          We couldn't find that piece.
+        </h1>
+
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#827366]">
+          {error || 'This product may no longer be available.'}
+        </p>
+
+        <Link
+          to="/products"
+          className="mt-7 inline-flex bg-[#A65D45] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#874832]"
+        >
+          Explore the collection
+        </Link>
+      </main>
+    );
+  }
+
+  const name = getName(product);
+  const category = getCategory(product);
+  const images = getImages(product);
+  const artisanName = getArtisan(product);
+
+  const description =
+    product.description ||
+    product.details ||
+    product.productDescription ||
+    '';
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#FAF7F1] pb-12 text-[#38291F] sm:pb-16">
+      <div className="mx-auto max-w-[1380px] px-4 pt-6 sm:px-7 sm:pt-9 lg:px-12">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-7 flex flex-wrap items-center gap-2 text-xs text-[#827366] sm:mb-9"
+        >
+          <Link
+            className="transition hover:text-[#A65D45]"
+            to="/"
+          >
+            Home
+          </Link>
+
+          <span aria-hidden="true">/</span>
+
+          <Link
+            className="transition hover:text-[#A65D45]"
+            to="/products"
+          >
+            Collection
+          </Link>
+
+          {category && (
+            <>
+              <span aria-hidden="true">/</span>
+
+              <Link
+                className="transition hover:text-[#A65D45]"
+                to={`/products?category=${encodeURIComponent(category)}`}
+              >
+                {category}
+              </Link>
+            </>
+          )}
+
+          <span aria-hidden="true">/</span>
+
+          <span
+            className="max-w-[180px] truncate text-[#38291F]"
+            aria-current="page"
+          >
+            {name}
+          </span>
         </nav>
 
-        {/* Gallery & Product Specs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <ProductGallery images={PRODUCT_DATA.images} />
-          <ProductInfo product={PRODUCT_DATA} />
-        </div>
+        <section className="grid items-start gap-8 md:grid-cols-2 md:gap-10 lg:gap-16">
+          <ProductGallery
+            images={images}
+            productName={name}
+          />
 
-        {/* Artisan Profile & Recommendations */}
-        <div className="mt-16 border-t border-outline-variant pt-16 grid grid-cols-1 lg:grid-cols-12 gap-12">
-          <ArtisanBioCard artisan={PRODUCT_DATA.artisan} />
-          <RecommendedProducts products={RECOMMENDED_ITEMS} />
-        </div>
-      </main>
+          <ProductInfo
+            product={product}
+            onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
+          />
+        </section>
 
-      <BottomNav />
-    </div>
+        {cartMessage && (
+          <div
+            role="status"
+            className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-[#E8DDD0] bg-white px-4 py-3 text-sm"
+          >
+            <span className="text-[#604936]">
+              {cartMessage}
+            </span>
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setCartMessage('')}
+                className="text-[#827366] underline underline-offset-4"
+              >
+                Dismiss
+              </button>
+
+              <Link
+                to="/cart"
+                className="font-semibold text-[#A65D45] underline underline-offset-4"
+              >
+                View cart
+              </Link>
+            </div>
+          </div>
+        )}
+
+        <section className="mt-12 grid gap-8 border-t border-[#E5D9CA] pt-9 sm:mt-16 sm:pt-12 md:grid-cols-2 md:gap-14">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+              The details
+            </p>
+
+            <h2 className="mt-3 font-headline text-2xl sm:text-3xl">
+              Made to be lived with.
+            </h2>
+
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[#766A5E]">
+              {description ||
+                'Details about this piece have not been provided yet.'}
+            </p>
+
+            {category && (
+              <p className="mt-5 text-xs text-[#827366]">
+                Category:{' '}
+                <span className="text-[#38291F]">
+                  {category}
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div className="bg-[#F0E6D8] p-6 sm:p-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+              Behind the piece
+            </p>
+
+            <h2 className="mt-3 font-headline text-2xl sm:text-3xl">
+              A little more meaning in the everyday.
+            </h2>
+
+            {artisanName ? (
+              <p className="mt-4 text-sm leading-7 text-[#766A5E]">
+                Created by {artisanName}. Discover a piece selected
+                for its character and thoughtful craftsmanship.
+              </p>
+            ) : (
+              <p className="mt-4 text-sm leading-7 text-[#766A5E]">
+                Every creation has its own character. Artisan details
+                for this piece have not been provided.
+              </p>
+            )}
+
+            <Link
+              to="/categories"
+              className="mt-6 inline-flex border-b border-[#A65D45] pb-1 text-xs font-semibold text-[#8E4B35] transition hover:text-[#38291F]"
+            >
+              Explore more crafts →
+            </Link>
+          </div>
+        </section>
+
+        {recommendations.length > 0 && (
+          <section className="mt-12 border-t border-[#E5D9CA] pt-9 sm:mt-16 sm:pt-12">
+            <div className="mb-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+                You may also like
+              </p>
+
+              <h2 className="mt-2 font-headline text-2xl sm:text-3xl">
+                More thoughtful finds.
+              </h2>
+            </div>
+
+            <RecommendedProduct
+              products={recommendations}
+            />
+          </section>
+        )}
+      </div>
+    </main>
   );
-};
+}

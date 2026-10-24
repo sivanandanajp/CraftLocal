@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
@@ -11,6 +12,7 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true,
+      trim: true,
     },
 
     price: {
@@ -22,6 +24,7 @@ const productSchema = new mongoose.Schema(
     image: {
       type: String,
       required: true,
+      trim: true,
     },
 
     category: {
@@ -34,6 +37,57 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+      default: 0,
+    },
+
+    // The seller who owns this product.
+    // Optional temporarily to preserve existing seeded products.
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
+    // Location where the artisan who makes this product is based.
+    artisanLocation: {
+      city: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+
+      district: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+
+      state: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+
+      postalCode: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+
+      latitude: {
+        type: Number,
+        min: -90,
+        max: 90,
+        default: null,
+      },
+
+      longitude: {
+        type: Number,
+        min: -180,
+        max: 180,
+        default: null,
+      },
     },
   },
   {

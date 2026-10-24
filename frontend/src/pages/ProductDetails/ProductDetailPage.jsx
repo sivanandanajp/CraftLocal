@@ -1,191 +1,472 @@
-import { useState } from "react";
-import ImageGallery from "./ImageGallery";
-import QuantitySelector from "./QuantitySelector";
-import ProductCard from "./ProductCard";
 
-const product = {
-  title: "Hand-Thrown Terracotta Bowl",
-  price: 45.0,
-  distance: "1.2km away",
-  images: [
-    { src: "https://lh3.googleusercontent.com/aida-public/AB6AXuBfqbi2rR5TJ-jxKZHAPh3Z8Wkw9AswO-UesdNI0xPW3i_YAQWRHZKDt5Dm2LGU9hhX2q4pJb3nsm1THLI1FeVwe9d7EmRjnWgTfuNYI-V8JPFXwvbyfYZKSbGXB7fO2_KQulxi-zOwLDDIujMa26gWieBEHBgXxXPnKi0ChuhF7CVCHvd__5qBYejaWrweJRiDR377JXgs4N9Nj45a28bXwL3AnuWqNG-ZO9zXMxPp68t798XxUaHu", alt: "Main product photo of terracotta bowl" },
-    { src: "https://lh3.googleusercontent.com/aida-public/AB6AXuAJICaO-8XzyCQYoL6CODjCqeZ7wFqaM9tdEIyHChKZhxc2ibHvfvymRViujTF4AcydW2Y-7QF2eIUshk83A85ImqP6B6DwXEV9NBW823yC4hnq-RgTp7oh7RQUfJ6xnN2xwbLFaN17WppzbCk6VtMe_fvdc6YRduNKCt01i444tzOZ139IQhmfhy0kfaNcR5XeLk1vO6IY9JUHP-YVqVWG2aWc4FW2rQQauSt2mWxWOj3SrXcufSSH", alt: "Rim and glaze close-up" },
-    { src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCR2n_ONgYGnVVfMrbHdJ_OL2yJGc_DOzQCnelqkPiflKtkWFmuqRAy7HEhb4mK9tpWG5n7DewqKXcqxxR-SROpH_qBhsS0fnrr2blKrlILexwW1wIbdRWjppBoYLv53MBfZ3OWHi8y1pZdxbdfQ6uCeCJA52kzcwqKxxJ_u_LjOb-G3xYY_cVnjTj86QPIqj0Fa_AeZkOWQ3vt5-02REuLahyTkwGCZH8cWLRT5Arg_MjXQHipOmYW", alt: "Top-down view empty bowl" },
-  ],
-  artisan: {
-    name: "Studio Terra",
-    location: "Portland, OR",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCkJaZ1LQ7t9-_WeN8kxBE0HYo1CLCl2dCKL4WBZI54M3ISu-hZQai7KPVelUbD1FKOWuCP3f1ByoR-jBcd1VIhDzZo-zVRsSB-BpLP-YtnluZsI1gME9fCfWaINuoL5yFuMNeb-ogY2FzXBhCjNNx5ft93dNPNEeNsZFyxIkTkfjFMIs0c4R-j8fW-iNGqPOrKuPZ0gNGlFWt_0comCOz1kO89yOj00dZ1puuCsVeMuFTvsRtK1NaP",
-    bio: "Dedicated to preserving traditional pottery techniques, Studio Terra crafts functional art pieces designed for everyday living. Each piece is thrown by hand and glazed with custom-mixed, food-safe finishes reflecting the local landscape.",
-  },
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
+import { ProductGallery } from '../../components/ProductGallery';
+import { ProductInfo } from '../../components/ProductInfo';
+import { RecommendedProducts } from '../../components/RecommendedProduct';
+import ReviewSection from '../../components/ReviewSection';
+
+const API_URL = 'http://localhost:5000/api/products';
+
+const getId = (product) => String(product?._id || product?.id || '');
+
+const getName = (product) =>
+  product?.name || product?.title || product?.productName || 'Handcrafted piece';
+
+const getImage = (product) => {
+  const image =
+    product?.image ||
+    product?.imageUrl ||
+    product?.thumbnail ||
+    product?.images?.[0];
+
+  if (typeof image === 'string') return image;
+
+  if (image && typeof image === 'object') {
+    return image.url || image.secure_url || image.src || '';
+  }
+
+  return '';
 };
 
-const recommendations = [
-  { title: "Speckled Morning Mug", vendor: "Earth & Kiln", price: 32.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCPl2RlWMS9zMyPArNDTX9W1MgwOv95LHRiD_xzbRLwMzmvTpIQBPh6V_kaQFAZnyQPiuKajHGuFvK4nXLrZsp6TRo2bRVf20FIhkBF5Bf6_6rYo3ekvqhJaRn_qKoXPf_hQzKyUGQs5jq0PbpyHGNT9NZ7evHS_PPgz9RNFztC7WCX5NzwMVixbBI0CsLSe_wR7b_IklDzot1LKKfLcBW_vt8uGbViNXrFX11suYD9AhjymddMtXnt", alt: "Speckled ceramic mug on wooden saucer" },
-  { title: "Carved Serving Spoons", vendor: "TimberWorks", price: 45.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC1EhN5O1RCnGhM9mD6IJLdlwuVoepZpv5BmIeDTgaQLuLuESXvf2ee2oDUxlgvx9vHPjETqFNiXDlHsybZmrFbMUsGOWqMctkyeA066XJT6x7eW68YJar3ajyTPvetGBL5mSpApqkLS_sS6fopjwsi1VkSL_23qu2FbTyYu1RxzlgeVSkZJSgBsY-ySWf0n0KO8vsVvjvZM4Kz_oVOgI-vzGy4d1zMk_7lGQms3v9VM-OSLOIvkx5L", alt: "Hand-carved wooden serving spoons" },
-  { title: "Cedarwood Soy Candle", vendor: "Lumina Local", price: 28.0, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzlgtmfEd--wX8iYxs33GsgQ0itlVMSiKHSCDmaSAVhCLe6fM5ICbSBlaFFF9VrZ4D4p8LQ6QBjEctJ3D8RebvHL42Q5z2dtTkv5YatUEXKr_E_319D1YMj22qf4l-YJgPkUNtR21oSC39JQWRMDbOT3MAkme2yE-KZ1K_lt-vT2TpJ2XnTukjBdzJj_23RlS8PPqiJXgg7vDhKWFoYtX7H6Sx5tvKa8fP4M0YP4Z9TC6PRnSqoB1K", alt: "Cedarwood soy candle in ceramic jar" },
-];
+const getImages = (product) => {
+  const images = [
+    product?.image,
+    product?.imageUrl,
+    product?.thumbnail,
+    ...(Array.isArray(product?.images) ? product.images : []),
+  ]
+    .map((image) => {
+      if (typeof image === 'string') return image;
 
-export default function ProductDetailPage() {
-  const [quantity, setQuantity] = useState(1);
+      if (image && typeof image === 'object') {
+        return image.url || image.secure_url || image.src || '';
+      }
 
-  const handleAddToCart = () => {
-    // Connect to cart API later
-  };
+      return '';
+    })
+    .filter(Boolean);
 
-  const handleBuyNow = () => {
-    // Connect to checkout flow later
-  };
+  return [...new Set(images)];
+};
 
-  const handleSave = () => {
-    // Connect to wishlist API later
-  };
+const getCategory = (product) => {
+  const category = product?.category;
 
-  const handleShare = () => {
-    // Connect to share/native share sheet later
-  };
+  if (typeof category === 'string') return category;
 
-  const handleFavoriteRec = (title) => {
-    // Connect to wishlist API later
-  };
+  if (category && typeof category === 'object') {
+    return category.name || category.title || '';
+  }
 
+  return '';
+};
+
+const getArtisan = (product) =>
+  product?.artisan?.name ||
+  product?.seller?.name ||
+  product?.creator?.name ||
+  product?.makerName ||
+  product?.vendor ||
+  product?.brand ||
+  '';
+
+const getPrice = (product) => Number(product?.price);
+
+async function readResponse(response) {
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Unable to load this product.');
+  }
+
+  return data;
+}
+
+function unwrapProduct(data) {
+  if (data?.product) return data.product;
+  if (data?.data && !Array.isArray(data.data)) return data.data;
+  return data;
+}
+
+function getProductList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.products)) return data.products;
+  if (Array.isArray(data?.data?.products)) return data.data.products;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function LoadingState() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-10">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-on-surface-variant">
-        <a className="transition-colors hover:text-primary" href="#">Home</a>
-        <span className="material-symbols-outlined text-base">chevron_right</span>
-        <a className="transition-colors hover:text-primary" href="#">Pottery</a>
-        <span className="material-symbols-outlined text-base">chevron_right</span>
-        <span className="font-medium text-primary">Ceramic Bowl</span>
-      </nav>
+    <main className="min-h-screen bg-[#FAF7F1] px-5 py-12 text-[#38291F] sm:px-8">
+      <div className="mx-auto max-w-7xl animate-pulse">
+        <div className="mb-8 h-3 w-48 bg-[#E8DDD0]" />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-        <ImageGallery images={product.images} />
+        <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr]">
+          <div className="aspect-[4/3] bg-[#EEE5D9]" />
 
-        <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-[28px] border border-outline-variant bg-surface p-5 shadow-sm md:p-6">
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-tertiary-container px-2.5 py-1 text-xs font-semibold text-on-tertiary-container">Local</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-xs font-medium text-on-surface-variant">
-                <span className="material-symbols-outlined text-[14px]">location_on</span>
-                {product.distance}
-              </span>
-            </div>
-
-            <h1 className="mb-3 text-3xl font-bold tracking-tight text-on-surface md:text-4xl">
-              {product.title}
-            </h1>
-            <p className="mb-5 text-2xl font-bold text-primary">${product.price.toFixed(2)}</p>
-
-            <a
-              className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition hover:border-primary/60 hover:bg-surface-container-low"
-              href="#"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full border border-outline-variant bg-surface-container">
-                  <img alt="Artisan Profile" className="h-full w-full object-cover" src={product.artisan.avatar} />
-                  <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-surface bg-secondary text-[8px] text-on-secondary">
-                    check
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-on-surface">By {product.artisan.name}</p>
-                  <p className="text-xs text-on-surface-variant">Verified Artisan</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant">chat</span>
-            </a>
-
-            <div className="mb-5 space-y-3 rounded-2xl bg-surface-container-low p-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-secondary">
-                <span className="material-symbols-outlined">check_circle</span>
-                In Stock
-              </div>
-              <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-                <span className="material-symbols-outlined">storefront</span>
-                Ready for Pickup in 2 hours
-              </div>
-            </div>
-
-            <div className="space-y-4 border-t border-outline-variant pt-5">
-              <QuantitySelector quantity={quantity} onChange={setQuantity} />
-
-              <div className="space-y-3">
-                <button
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition hover:opacity-95"
-                  onClick={handleAddToCart}
-                >
-                  <span className="material-symbols-outlined">shopping_cart</span>
-                  Add to Cart
-                </button>
-                <button
-                  className="flex w-full items-center justify-center rounded-xl border border-secondary px-4 py-3 text-sm font-semibold text-secondary transition hover:bg-secondary-container/20"
-                  onClick={handleBuyNow}
-                >
-                  Buy Now
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-center gap-6 border-t border-outline-variant pt-4 text-sm font-medium text-on-surface-variant">
-              <button className="flex items-center gap-2 transition hover:text-primary" onClick={handleSave}>
-                <span className="material-symbols-outlined text-[18px]">favorite_border</span>
-                Save
-              </button>
-              <button className="flex items-center gap-2 transition hover:text-primary" onClick={handleShare}>
-                <span className="material-symbols-outlined text-[18px]">share</span>
-                Share
-              </button>
-            </div>
+          <div className="space-y-5 py-4">
+            <div className="h-3 w-24 bg-[#E8DDD0]" />
+            <div className="h-10 w-4/5 bg-[#E8DDD0]" />
+            <div className="h-6 w-28 bg-[#E8DDD0]" />
+            <div className="h-24 bg-[#E8DDD0]" />
+            <div className="h-12 bg-[#E8DDD0]" />
           </div>
         </div>
       </div>
+    </main>
+  );
+}
 
-      <div className="mt-12 grid grid-cols-1 gap-8 border-t border-outline-variant pt-8 lg:grid-cols-12">
-        <div className="lg:col-span-4 rounded-[24px] border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-          <h3 className="mb-4 text-2xl font-bold text-on-surface">About the Maker</h3>
-          <div className="mb-4 flex items-center gap-3">
-            <img alt="Artisan" className="h-16 w-16 rounded-full object-cover" src={product.artisan.avatar} />
-            <div>
-              <p className="font-semibold text-on-surface">{product.artisan.name}</p>
-              <p className="flex items-center gap-1 text-sm text-on-surface-variant">
-                <span className="material-symbols-outlined text-[14px]">location_on</span>
-                {product.artisan.location}
+export default function ProductDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
+  const [product, setProduct] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [cartMessage, setCartMessage] = useState('');
+  const [cartError, setCartError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProduct() {
+      setLoading(true);
+      setError('');
+      setProduct(null);
+      setRecommendations([]);
+      setCartMessage('');
+      setCartError('');
+
+      try {
+        let currentProduct;
+
+        try {
+          const response = await fetch(
+            `${API_URL}/${encodeURIComponent(id)}`,
+            { signal: controller.signal }
+          );
+
+          const data = await readResponse(response);
+          currentProduct = unwrapProduct(data);
+        } catch (requestError) {
+          if (requestError.name === 'AbortError') {
+            throw requestError;
+          }
+
+          const response = await fetch(API_URL, {
+            signal: controller.signal,
+          });
+
+          const data = await readResponse(response);
+          const list = getProductList(data);
+
+          currentProduct = list.find(
+            (item) => getId(item) === String(id)
+          );
+        }
+
+        if (controller.signal.aborted) return;
+
+        if (!currentProduct || getId(currentProduct) !== String(id)) {
+          throw new Error('This product could not be found.');
+        }
+
+        setProduct(currentProduct);
+
+        try {
+          const response = await fetch(
+            `${API_URL}?page=1&limit=100`,
+            { signal: controller.signal }
+          );
+
+          const data = await readResponse(response);
+          const list = getProductList(data);
+
+          if (!controller.signal.aborted) {
+            const currentCategory = getCategory(currentProduct)
+              .trim()
+              .toLowerCase();
+
+            const otherProducts = list.filter(
+              (item) => getId(item) !== getId(currentProduct)
+            );
+
+            const sameCategory = otherProducts.filter(
+              (item) =>
+                currentCategory &&
+                getCategory(item).trim().toLowerCase() === currentCategory
+            );
+
+            const differentCategory = otherProducts.filter(
+              (item) =>
+                !currentCategory ||
+                getCategory(item).trim().toLowerCase() !== currentCategory
+            );
+
+            setRecommendations(
+              [...sameCategory, ...differentCategory].slice(0, 8)
+            );
+          }
+        } catch (recommendationError) {
+          if (recommendationError.name !== 'AbortError') {
+            console.warn(
+              'Could not load recommendations:',
+              recommendationError
+            );
+          }
+        }
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') {
+          setError(requestError.message || 'Something went wrong.');
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (id) {
+      loadProduct();
+    } else {
+      setError('No product was selected.');
+      setLoading(false);
+    }
+
+    return () => controller.abort();
+  }, [id]);
+
+  const handleAddToCart = (quantity) => {
+    if (!product) return false;
+
+    try {
+      addToCart(
+        {
+          ...product,
+          _id: getId(product),
+          name: getName(product),
+          price: getPrice(product),
+          image: getImage(product),
+          category: getCategory(product),
+        },
+        quantity
+      );
+
+      setCartMessage('Added to your cart.');
+      setCartError('');
+      return true;
+    } catch (cartError) {
+      setCartMessage('');
+      setCartError(
+        cartError.message || 'This item could not be added to your cart.'
+      );
+      return false;
+    }
+  };
+
+  const handleBuyNow = (quantity) => {
+    if (!product) return;
+
+    try {
+      addToCart(
+        {
+          ...product,
+          _id: getId(product),
+          name: getName(product),
+          price: getPrice(product),
+          image: getImage(product),
+          category: getCategory(product),
+        },
+        quantity
+      );
+
+      navigate('/checkout');
+    } catch (cartError) {
+      setCartMessage('');
+      setCartError(
+        cartError.message || 'This item could not be added to your cart.'
+      );
+    }
+  };
+
+  if (loading) return <LoadingState />;
+
+  if (error || !product) {
+    return (
+      <main className="min-h-[60vh] bg-[#FAF7F1] px-5 py-16 text-center text-[#38291F] sm:px-8">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+          CraftLocal collection
+        </p>
+
+        <h1 className="mt-4 font-headline text-3xl sm:text-4xl">
+          We couldn't find that piece.
+        </h1>
+
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#827366]">
+          {error || 'This product may no longer be available.'}
+        </p>
+
+        <Link
+          to="/products"
+          className="mt-7 inline-flex bg-[#A65D45] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#874832]"
+        >
+          Explore the collection
+        </Link>
+      </main>
+    );
+  }
+
+  const name = getName(product);
+  const category = getCategory(product);
+  const images = getImages(product);
+  const artisanName = getArtisan(product);
+
+  const description =
+    product.description ||
+    product.details ||
+    product.productDescription ||
+    '';
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#FAF7F1] pb-12 text-[#38291F] sm:pb-16">
+      <div className="mx-auto max-w-[1380px] px-4 pt-6 sm:px-7 sm:pt-9 lg:px-12">
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-7 flex flex-wrap items-center gap-2 text-xs text-[#827366] sm:mb-9"
+        >
+          <Link className="transition hover:text-[#A65D45]" to="/">
+            Home
+          </Link>
+
+          <span aria-hidden="true">/</span>
+
+          <Link
+            className="transition hover:text-[#A65D45]"
+            to="/products"
+          >
+            Collection
+          </Link>
+
+          {category && (
+            <>
+              <span aria-hidden="true">/</span>
+
+              <Link
+                className="transition hover:text-[#A65D45]"
+                to={`/products?category=${encodeURIComponent(category)}`}
+              >
+                {category}
+              </Link>
+            </>
+          )}
+
+          <span aria-hidden="true">/</span>
+
+          <span
+            className="max-w-[180px] truncate text-[#38291F]"
+            aria-current="page"
+          >
+            {name}
+          </span>
+        </nav>
+
+        <section className="grid items-start gap-8 md:grid-cols-2 md:gap-10 lg:gap-16">
+          <ProductGallery images={images} productName={name} />
+
+          <ProductInfo
+            product={product}
+            onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
+            cartMessage={cartMessage}
+            cartError={cartError}
+          />
+        </section>
+
+        <section className="mt-12 grid gap-8 border-t border-[#E5D9CA] pt-9 sm:mt-16 sm:pt-12 md:grid-cols-2 md:gap-14">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+              The details
+            </p>
+
+            <h2 className="mt-3 font-headline text-2xl sm:text-3xl">
+              Made to be lived with.
+            </h2>
+
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[#766A5E]">
+              {description ||
+                'Details about this piece have not been provided yet.'}
+            </p>
+
+            {category && (
+              <p className="mt-5 text-xs text-[#827366]">
+                Category:{' '}
+                <span className="text-[#38291F]">{category}</span>
               </p>
-            </div>
+            )}
           </div>
-          <p className="mb-4 text-sm leading-7 text-on-surface-variant">{product.artisan.bio}</p>
-          <button className="text-sm font-semibold text-tertiary underline transition hover:text-primary">
-            View Artisan Profile
-          </button>
-        </div>
 
-        <div className="lg:col-span-8">
-          <div className="mb-4 flex items-end justify-between">
-            <h2 className="text-2xl font-bold text-on-surface">More from Nearby Artisans</h2>
-            <div className="flex gap-2">
-              <button className="rounded-full border border-outline-variant p-2 text-on-surface-variant transition hover:border-primary hover:text-primary">
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <button className="rounded-full border border-outline-variant p-2 text-on-surface-variant transition hover:border-primary hover:text-primary">
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
+          <div className="bg-[#F0E6D8] p-6 sm:p-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+              Behind the piece
+            </p>
+
+            <h2 className="mt-3 font-headline text-2xl sm:text-3xl">
+              A little more meaning in the everyday.
+            </h2>
+
+            {artisanName ? (
+              <p className="mt-4 text-sm leading-7 text-[#766A5E]">
+                Created by {artisanName}. Discover a piece selected for its
+                character and thoughtful craftsmanship.
+              </p>
+            ) : (
+              <p className="mt-4 text-sm leading-7 text-[#766A5E]">
+                Every creation has its own character. Artisan details for this
+                piece have not been provided.
+              </p>
+            )}
+
+            <Link
+              to="/categories"
+              className="mt-6 inline-flex border-b border-[#A65D45] pb-1 text-xs font-semibold text-[#8E4B35] transition hover:text-[#38291F]"
+            >
+              Explore more crafts →
+            </Link>
+          </div>
+        </section>
+
+        {recommendations.length > 0 && (
+          <section className="mt-12 border-t border-[#E5D9CA] pt-9 sm:mt-16 sm:pt-12">
+            <div className="mb-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A65D45]">
+                You may also like
+              </p>
+
+              <h2 className="mt-2 font-headline text-2xl sm:text-3xl">
+                More thoughtful finds.
+              </h2>
             </div>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {recommendations.map((rec) => (
-              <ProductCard
-                key={rec.title}
-                image={rec.image}
-                alt={rec.alt || rec.title}
-                title={rec.title}
-                vendor={rec.vendor}
-                price={rec.price}
-                onFavorite={() => handleFavoriteRec(rec.title)}
-              />
-            ))}
-          </div>
-        </div>
+
+            <RecommendedProducts products={recommendations} />
+          </section>
+        )}
+
+        <ReviewSection
+          productId={getId(product)}
+          productSellerId={
+            product.sellerId?._id ||
+            product.sellerId ||
+            product.seller?._id ||
+            product.seller?.id ||
+            ''
+          }
+        />
       </div>
     </main>
   );

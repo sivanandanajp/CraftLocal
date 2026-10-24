@@ -1,31 +1,60 @@
-// tailwind.config.js
+
+/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
-        background: "#fcf9f8",
-        surface: "#fcf9f8",
-        primary: "#9f3c16",
-        "primary-container": "#bf542c",
-        "on-primary": "#ffffff",
-        secondary: "#376847",
-        "secondary-container": "#b6edc2",
-        tertiary: "#635b48",
-        "tertiary-fixed": "#ede1c9",
-        "on-tertiary-fixed": "#211b0c",
-        "on-surface": "#1b1c1c",
-        "on-surface-variant": "#57423b",
-        "outline-variant": "#dec0b7",
-        "surface-container": "#f0eded",
-        "surface-container-low": "#f6f3f2",
-        "surface-container-lowest": "#ffffff",
-        "surface-tint": "#a23e18",
+        // Main brand palette
+        background: "#FAF7F1",
+        surface: "#FAF7F1",
+        primary: "#A65D45",
+        "primary-container": "#C47A5D",
+        "on-primary": "#FFFFFF",
+
+        // Natural accent colors
+        secondary: "#55745B",
+        "secondary-container": "#DCE7D8",
+        tertiary: "#85745C",
+        "tertiary-fixed": "#EDE1CE",
+        "on-tertiary-fixed": "#332B21",
+
+        // Text colors
+        "on-background": "#332821",
+        "on-surface": "#332821",
+        "on-surface-variant": "#76675C",
+
+        // Borders and surfaces
+        "outline-variant": "#DED3C6",
+        "surface-container": "#F0E9DF",
+        "surface-container-low": "#F5F0E8",
+        "surface-container-lowest": "#FFFFFF",
+        "surface-tint": "#A65D45",
+
+        // Additional design tokens
+        espresso: "#332821",
+        terracotta: "#A65D45",
+        cream: "#FAF7F1",
+        sand: "#E8DDD0",
+        sage: "#DCE7D8",
       },
+
       fontFamily: {
         body: ["Be Vietnam Pro", "sans-serif"],
         headline: ["Manrope", "sans-serif"],
-      }
+      },
+
+      borderRadius: {
+        "editorial": "1rem",
+        "editorial-lg": "1.5rem",
+      },
+
+      boxShadow: {
+        "soft": "0 8px 30px rgba(51, 40, 33, 0.06)",
+      },
     },
   },
   plugins: [],
