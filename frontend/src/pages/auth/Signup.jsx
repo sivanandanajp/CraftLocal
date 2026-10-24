@@ -11,7 +11,7 @@ export const Signup = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'buyer', // Default role
+    role: 'buyer',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -20,11 +20,16 @@ export const Signup = () => {
   const handleChange = (e) => {
     if (error) setError(null);
     if (localError) setLocalError('');
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (formData.password !== formData.confirmPassword) {
       setLocalError('Passwords do not match');
       return;
@@ -37,9 +42,10 @@ export const Signup = () => {
         password: formData.password,
         role: formData.role,
       });
+
       navigate('/profile');
     } catch (err) {
-      // Error handled inside AuthContext
+      // Error is handled inside AuthContext.
     }
   };
 
@@ -71,7 +77,10 @@ export const Signup = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Full Name */}
             <div>
-              <label className="block font-semibold mb-2">Full Name</label>
+              <label className="block font-semibold mb-2">
+                Full Name
+              </label>
+
               <input
                 type="text"
                 name="name"
@@ -85,7 +94,10 @@ export const Signup = () => {
 
             {/* Email */}
             <div>
-              <label className="block font-semibold mb-2">Email Address</label>
+              <label className="block font-semibold mb-2">
+                Email Address
+              </label>
+
               <input
                 type="email"
                 name="email"
@@ -99,11 +111,20 @@ export const Signup = () => {
 
             {/* Role Selection */}
             <div>
-              <label className="block font-semibold mb-2">Account Type</label>
+              <label className="block font-semibold mb-2">
+                Account Type
+              </label>
+
               <div className="grid grid-cols-2 gap-4">
+                {/* Buyer */}
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, role: 'buyer' })}
+                  onClick={() => {
+                    setFormData({ ...formData, role: 'buyer' });
+                    setLocalError('');
+                    if (error) setError(null);
+                  }}
+                  aria-pressed={formData.role === 'buyer'}
                   className={`py-3 px-4 rounded-xl font-medium border transition ${
                     formData.role === 'buyer'
                       ? 'bg-primary text-on-primary border-primary shadow-sm'
@@ -112,11 +133,18 @@ export const Signup = () => {
                 >
                   🛍️ Buyer
                 </button>
+
+                {/* Creator / Seller */}
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, role: 'seller' })}
+                  onClick={() => {
+                    setFormData({ ...formData, role: 'creator' });
+                    setLocalError('');
+                    if (error) setError(null);
+                  }}
+                  aria-pressed={formData.role === 'creator'}
                   className={`py-3 px-4 rounded-xl font-medium border transition ${
-                    formData.role === 'seller'
+                    formData.role === 'creator'
                       ? 'bg-primary text-on-primary border-primary shadow-sm'
                       : 'bg-surface text-on-surface border-outline-variant hover:bg-surface-container'
                   }`}
@@ -128,7 +156,10 @@ export const Signup = () => {
 
             {/* Password */}
             <div>
-              <label className="block font-semibold mb-2">Password</label>
+              <label className="block font-semibold mb-2">
+                Password
+              </label>
+
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -139,9 +170,11 @@ export const Signup = () => {
                   required
                   className="w-full px-5 py-4 pr-14 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
                 >
                   <span className="material-symbols-outlined">
@@ -153,7 +186,10 @@ export const Signup = () => {
 
             {/* Confirm Password */}
             <div>
-              <label className="block font-semibold mb-2">Confirm Password</label>
+              <label className="block font-semibold mb-2">
+                Confirm Password
+              </label>
+
               <input
                 type="password"
                 name="confirmPassword"
@@ -172,6 +208,7 @@ export const Signup = () => {
                 required
                 className="mt-1 w-5 h-5 accent-primary"
               />
+
               <p className="text-sm text-on-surface-variant">
                 I agree to the Terms of Service and Privacy Policy.
               </p>
@@ -192,6 +229,7 @@ export const Signup = () => {
             <span className="text-on-surface-variant">
               Already have an account?{' '}
             </span>
+
             <Link
               to="/login"
               className="text-primary font-bold hover:text-primary-container"

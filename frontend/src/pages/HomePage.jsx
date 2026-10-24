@@ -1,32 +1,7 @@
-
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000/api/products';
-
-const CATEGORY_DESCRIPTIONS = {
-  pottery: 'Handcrafted ceramics for everyday rituals.',
-  textiles: 'Thoughtful fabrics, woven textures, and handmade comforts.',
-  woodwork: 'Natural wood creations with character and warmth.',
-  jewelry: 'Distinctive handmade pieces with a personal touch.',
-  'home decor': 'Artisan accents that make a space feel like home.',
-  kitchenware: 'Useful, beautiful essentials for your kitchen.',
-};
-
-const CATEGORY_IMAGES = {
-  pottery:
-    'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=85',
-  textiles:
-    'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=85',
-  woodwork:
-    'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=800&q=85',
-  jewelry:
-    'https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=800&q=85',
-  'home decor':
-    'https://images.unsplash.com/photo-1490312278390-ab64016e0aa9?auto=format&fit=crop&w=800&q=85',
-  kitchenware:
-    'https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&w=800&q=85',
-};
 
 const getProductId = (product) => product._id || product.id;
 
@@ -44,18 +19,6 @@ const getProductImage = (product) => {
 
   if (image && typeof image === 'object') {
     return image.url || image.secure_url || image.src || '';
-  }
-
-  return '';
-};
-
-const getCategoryName = (product) => {
-  const category = product.category;
-
-  if (typeof category === 'string') return category.trim();
-
-  if (category && typeof category === 'object') {
-    return String(category.name || category.title || '').trim();
   }
 
   return '';
@@ -111,7 +74,6 @@ function SectionHeading({ eyebrow, title, description, link, linkLabel }) {
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -140,7 +102,6 @@ export default function HomePage() {
           ? firstData
           : firstData.products || firstData.data || [];
 
-        // Fetch additional pages so category counts cover the full catalog.
         if (!Array.isArray(firstData)) {
           const totalPages = Math.max(
             1,
@@ -170,48 +131,6 @@ export default function HomePage() {
         if (controller.signal.aborted) return;
 
         setProducts(allProducts.slice(0, 4));
-
-        // Build categories from real backend product data.
-        const grouped = new Map();
-
-        allProducts.forEach((product) => {
-          const name = getCategoryName(product);
-
-          if (!name) return;
-
-          const key = name.toLowerCase();
-
-          if (!grouped.has(key)) {
-            grouped.set(key, {
-              name,
-              count: 0,
-              image: '',
-            });
-          }
-
-          const category = grouped.get(key);
-          category.count += 1;
-
-          if (!category.image) {
-            category.image = getProductImage(product);
-          }
-        });
-
-        const actualCategories = Array.from(grouped.values())
-          .map((category) => {
-            const key = category.name.toLowerCase();
-
-            return {
-              ...category,
-              image: category.image || CATEGORY_IMAGES[key] || '',
-              description:
-                CATEGORY_DESCRIPTIONS[key] ||
-                `Discover handcrafted ${category.name.toLowerCase()} from our makers.`,
-            };
-          })
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        setCategories(actualCategories);
       } catch (error) {
         if (error.name !== 'AbortError') {
           console.error('Homepage marketplace loading failed:', error);
@@ -234,7 +153,6 @@ export default function HomePage() {
       {/* HERO */}
       <section className="px-4 pb-8 pt-5 sm:px-7 sm:pb-12 sm:pt-7 lg:px-12 lg:pt-9">
         <div className="mx-auto grid max-w-[1380px] overflow-hidden border border-[#E8DCCB] bg-[#F0E6D8] md:grid-cols-[0.92fr_1.08fr]">
-          {/* Hero text */}
           <div className="flex flex-col items-start justify-center px-6 py-11 sm:px-10 sm:py-14 lg:px-16 lg:py-16">
             <div className="flex items-center gap-3">
               <span className="h-px w-7 bg-[#A65D45]" />
@@ -259,7 +177,7 @@ export default function HomePage() {
               inspired by tradition. Pieces to live with, love, and keep.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div className="mt-8">
               <NavLink
                 to="/products"
                 className="group inline-flex items-center gap-4 bg-[#A65D45] px-6 py-3.5 text-xs font-medium tracking-wide text-white transition duration-300 hover:bg-[#874832]"
@@ -272,17 +190,9 @@ export default function HomePage() {
                   →
                 </span>
               </NavLink>
-
-              <NavLink
-                to="/categories"
-                className="border-b border-[#B99C83] pb-1 text-xs font-medium text-[#594335] transition hover:border-[#A65D45] hover:text-[#A65D45]"
-              >
-                Browse by category
-              </NavLink>
             </div>
           </div>
 
-          {/* Clean hero image — no text overlay or arrow button */}
           <div className="relative min-h-[280px] overflow-hidden sm:min-h-[360px] md:min-h-[470px]">
             <img
               src="https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=1600&q=90"
@@ -290,111 +200,6 @@ export default function HomePage() {
               className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
-        </div>
-      </section>
-
-      {/* REAL CATEGORY DISCOVERY */}
-      <section className="px-4 py-8 sm:px-7 sm:py-11 lg:px-12">
-        <div className="mx-auto max-w-[1280px]">
-          <SectionHeading
-            eyebrow="Explore by craft"
-            title="Find your kind of beautiful."
-            description="Choose a craft and discover pieces made by independent artisans."
-            link="/categories"
-            linkLabel="Explore all"
-          />
-
-          {loading ? (
-            <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div key={item} className="animate-pulse">
-                  <div className="aspect-[1.12/1] bg-[#EDE3D7]" />
-                  <div className="mt-4 h-4 w-2/3 bg-[#EDE3D7]" />
-                  <div className="mt-3 h-3 w-1/2 bg-[#EDE3D7]" />
-                </div>
-              ))}
-            </div>
-          ) : categories.length > 0 ? (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8 lg:grid-cols-3">
-              {categories.map((category, index) => (
-                <NavLink
-                  key={category.name.toLowerCase()}
-                  to={`/products?category=${encodeURIComponent(category.name)}`}
-                  className="group block min-w-0"
-                >
-                  <div className="relative overflow-hidden bg-[#EDE3D7]">
-                    <div className="aspect-[1.12/1] overflow-hidden">
-                      {category.image ? (
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.045]"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center font-headline text-4xl italic text-[#A65D45]">
-                          Craft
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="absolute left-3 top-3 bg-[#FAF7F1]/90 px-2.5 py-1.5 font-headline text-xs italic text-[#604936] sm:left-4 sm:top-4">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-
-                    <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#FAF7F1] text-[#5B4434] transition duration-300 group-hover:bg-[#A65D45] group-hover:text-white">
-                      ↗
-                    </span>
-                  </div>
-
-                  <div className="border-b border-[#E6DCCE] pb-4 pt-3 sm:pt-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-headline text-base font-medium text-[#38291F] transition group-hover:text-[#A65D45] sm:text-xl">
-                        {category.name}
-                      </h3>
-
-                      <span className="shrink-0 pt-1 text-[10px] text-[#827366] sm:text-xs">
-                        {category.count}{' '}
-                        {category.count === 1 ? 'piece' : 'pieces'}
-                      </span>
-                    </div>
-
-                    <p className="mt-1.5 text-[10px] leading-5 text-[#827366] sm:text-xs">
-                      {category.description}
-                    </p>
-
-                    <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#A65D45]">
-                      Discover collection →
-                    </p>
-                  </div>
-                </NavLink>
-              ))}
-            </div>
-          ) : (
-            <div className="border-y border-[#E6DCCE] py-12 text-center">
-              <p className="font-headline text-2xl text-[#38291F]">
-                {loadError
-                  ? 'Our collections are temporarily unavailable.'
-                  : 'The collections are taking shape.'}
-              </p>
-
-              <p className="mt-3 text-sm text-[#827366]">
-                {loadError
-                  ? 'Please check the product server and try again.'
-                  : 'Categories will appear here when products are available.'}
-              </p>
-
-              <NavLink
-                to="/products"
-                className="mt-5 inline-flex border-b border-[#A65D45] pb-1 text-xs font-medium text-[#A65D45]"
-              >
-                Visit the shop →
-              </NavLink>
-            </div>
-          )}
         </div>
       </section>
 

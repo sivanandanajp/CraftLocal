@@ -1,62 +1,76 @@
+
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Helper function to generate signed JWT Token
+// Generate JWT token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'craftlocal_secret_key', {
-    expiresIn: '30d',
-  });
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured in .env');
+  }
+
+  return jwt.sign(
+    { id },
+    process.env.JWT_SECRET,
+    { expiresIn: '30d' }
+  );
 };
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Public
+// Register new user
 const registerUser = async (req, res) => {
   try {
     const { name, fullName, email, password, role, longitude, latitude } = req.body;
-
-    // Accept either 'name' or 'fullName' from frontend
     const userName = name || fullName;
 
-    // 1. Basic field validation
     if (!userName || !email || !password) {
-      return res.status(400).json({ 
-        message: 'Please provide name, email, and password' 
+      return res.status(400).json({
+        message: 'Name, email, and password are required',
       });
     }
 
-    // 2. Check if user already exists
-    const userExists = await User.findOne({ email: email.toLowerCase() });
+    const normalizedRole = (role || 'buyer').toLowerCase();
+
+    if (!['buyer', 'creator'].includes(normalizedRole)) {
+      return res.status(400).json({
+        message: 'Role must be buyer or creator',
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const userExists = await User.findOne({ email: normalizedEmail });
+
     if (userExists) {
-      return res.status(400).json({ 
-        message: 'User already exists with this email address' 
+      return res.status(409).json({
+        message: 'User already exists with this email address',
       });
     }
 
-    // 3. Fallback coordinates [0, 0] if omitted
-    const parsedLng = !isNaN(parseFloat(longitude)) ? parseFloat(longitude) : 0;
-    const parsedLat = !isNaN(parseFloat(latitude)) ? parseFloat(latitude) : 0;
-
-    // 4. Build user data payload
     const userData = {
-      name: userName,
-      email: email.toLowerCase(),
+      name: userName.trim(),
+      email: normalizedEmail,
       password,
-      role: role ? role.toLowerCase() : 'buyer',
+      role: normalizedRole,
     };
 
-    // Safely attach location only if coordinates exist or schema expects it
-    if (longitude !== undefined || latitude !== undefined) {
-      userData.location = {
-        type: 'Point',
-        coordinates: [parsedLng, parsedLat],
-      };
+    if (longitude !== undefined && latitude !== undefined) {
+      const lng = Number(longitude);
+      const lat = Number(latitude);
+
+      if (
+        Number.isFinite(lng) &&
+        Number.isFinite(lat) &&
+        lng >= -180 && lng <= 180 &&
+        lat >= -90 && lat <= 90
+      ) {
+        userData.location = {
+          type: 'Point',
+          coordinates: [lng, lat],
+        };
+      }
     }
 
-    // 5. Create user record
     const user = await User.create(userData);
 
-    res.status(201).json({
+    return res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -66,96 +80,128 @@ const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration Error:', error);
-    res.status(500).json({ 
-      message: error.message || 'Server error during registration' 
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'User already exists with this email address',
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error.message || 'Server error during registration',
     });
   }
 };
 
-// @desc    Authenticate user & return JWT token
-// @route   POST /api/auth/login
-// @access  Public
+// Login user
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-
-    // Verify user exists and check password hash match
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        bio: user.bio,
-        avatar: user.avatar,
-        phone: user.phone,
-        savedAddresses: user.savedAddresses,
-        location: user.location,
-        token: generateToken(user._id),
+      return res.status(400).json({
+        message: 'Email and password are required',
       });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({
+        message: 'Invalid email or password',
+      });
+    }
+
+    return res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      bio: user.bio,
+      avatar: user.avatar,
+      phone: user.phone,
+      savedAddresses: user.savedAddresses,
+      location: user.location,
+      token: generateToken(user._id),
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Login Error:', error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Get logged-in user profile
-// @route   GET /api/auth/profile
-// @access  Private
+// Get logged-in user profile
 const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json(user);
+
+    return res.json(user);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Update user profile & addresses
-// @route   PUT /api/auth/profile
-// @access  Private
+// Update user profile and saved addresses
 const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.name = req.body.name || user.name;
-    user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
-    user.avatar = req.body.avatar || user.avatar;
-    user.phone = req.body.phone || user.phone;
+    if (req.body.name !== undefined) {
+      user.name = req.body.name;
+    }
 
-    if (req.body.savedAddresses) {
+    if (req.body.bio !== undefined) {
+      user.bio = req.body.bio;
+    }
+
+    if (req.body.avatar !== undefined) {
+      user.avatar = req.body.avatar;
+    }
+
+    if (req.body.phone !== undefined) {
+      user.phone = req.body.phone;
+    }
+
+    if (req.body.savedAddresses !== undefined) {
       user.savedAddresses = req.body.savedAddresses;
     }
 
-    // Safely parse and update geo coordinates if provided
-    if (req.body.longitude !== undefined && req.body.latitude !== undefined) {
-      const parsedLng = parseFloat(req.body.longitude);
-      const parsedLat = parseFloat(req.body.latitude);
-      if (!isNaN(parsedLng) && !isNaN(parsedLat)) {
+    if (
+      req.body.longitude !== undefined &&
+      req.body.latitude !== undefined
+    ) {
+      const lng = Number(req.body.longitude);
+      const lat = Number(req.body.latitude);
+
+      if (
+        Number.isFinite(lng) &&
+        Number.isFinite(lat) &&
+        lng >= -180 && lng <= 180 &&
+        lat >= -90 && lat <= 90
+      ) {
         user.location = {
           type: 'Point',
-          coordinates: [parsedLng, parsedLat],
+          coordinates: [lng, lat],
         };
       }
     }
 
     const updatedUser = await user.save();
 
-    res.json({
+    return res.json({
       _id: updatedUser._id,
       name: updatedUser.name,
       email: updatedUser.email,
@@ -167,12 +213,18 @@ const updateUserProfile = async (req, res) => {
       location: updatedUser.location,
     });
   } catch (error) {
-    console.error('Update Profile Backend Error:', error);
-    res.status(500).json({ message: error.message || 'Failed to update user profile' });
+    console.error('Update Profile Error:', error);
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error.message || 'Failed to update user profile',
+    });
   }
 };
 
-// Export both naming conventions to avoid routing crashes
 module.exports = {
   register: registerUser,
   registerUser,

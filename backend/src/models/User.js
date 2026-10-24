@@ -1,12 +1,14 @@
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema(
   {
-    // Authentication & Core Identity
+    // Authentication and core identity
     name: {
       type: String,
       required: [true, 'Please provide a name'],
+      trim: true,
     },
 
     email: {
@@ -28,7 +30,7 @@ const UserSchema = new mongoose.Schema(
       default: 'buyer',
     },
 
-    // Profile Details
+    // Profile details
     bio: {
       type: String,
       default: '',
@@ -44,43 +46,38 @@ const UserSchema = new mongoose.Schema(
       default: '',
     },
 
-    // Hyperlocal Location Format (GeoJSON)
+    // Hyperlocal location: [longitude, latitude]
     location: {
       type: {
         type: String,
         enum: ['Point'],
         default: 'Point',
       },
-
       coordinates: {
         type: [Number],
-        default: [0, 0], // [longitude, latitude]
+        default: [0, 0],
       },
     },
 
-    // Saved Shipping Addresses
+    // Saved shipping addresses
     savedAddresses: [
       {
         street: {
           type: String,
           required: true,
         },
-
         city: {
           type: String,
           required: true,
         },
-
         state: {
           type: String,
           required: true,
         },
-
         zipCode: {
           type: String,
           required: true,
         },
-
         isDefault: {
           type: Boolean,
           default: false,
@@ -93,7 +90,7 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook to hash password before saving to DB
+// Hash password before saving
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) {
     return;
@@ -103,12 +100,12 @@ UserSchema.pre('save', async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Helper method to compare entered password with hashed password
+// Compare entered password with stored hash
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
-// Indexing for proximity/geospatial searches
+// Geospatial index
 UserSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('User', UserSchema);

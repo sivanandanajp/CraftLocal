@@ -1,9 +1,11 @@
-
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
+
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { OrderProvider } from './context/OrderContext';
+
 import { Navbar } from './components/Navbar';
 import Footer from './components/Footer';
 import AppRoutes from './routes/AppRoutes';
@@ -18,16 +20,16 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            <div className="flex min-h-screen flex-col">
+            <OrderProvider>
               <Navbar />
 
-              <main className="flex-1">
+              <main>
                 <AppRoutes />
               </main>
 
               <BottomNav />
               <Footer />
-            </div>
+            </OrderProvider>
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
