@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'https://craftlocal-backend.onrender.com'}/api`,
+  baseURL: `${import.meta.env.API_URL || 'https://craftlocal-backend.onrender.com'}/api`,
 });
 
 // Attach JWT token to requests
