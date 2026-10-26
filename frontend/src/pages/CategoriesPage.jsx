@@ -9,7 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api/products';
+const API_URL = 'https://craftlocal-backend.onrender.com/api/products';
 const PRODUCTS_PER_REQUEST = 100;
 
 const CATEGORY_IMAGES = {

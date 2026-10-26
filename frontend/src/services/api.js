@@ -1,24 +1,24 @@
+
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.VITE_API_URL || 'https://craftlocal-backend.onrender.com'}/api`,
 });
 
-// Request Interceptor to attach JWT token
+// Attach JWT token to requests
 API.interceptors.request.use(
   (config) => {
-    // 1. Try direct token key
     let token = localStorage.getItem('token');
 
-    // 2. Fallback to user object saved in localStorage
     if (!token) {
       const storedUser = localStorage.getItem('user');
+
       if (storedUser) {
         try {
           const parsed = JSON.parse(storedUser);
           token = parsed?.token;
-        } catch (e) {
-          console.error('Error parsing stored user:', e);
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
         }
       }
     }
@@ -26,22 +26,25 @@ API.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor for handling global errors (e.g. 401 Unauthorized)
+// Handle unauthorized responses
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
+
     return Promise.reject(error);
   }
 );

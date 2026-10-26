@@ -1,5 +1,5 @@
 
-const API_URL = 'http://localhost:5000/api/products';
+const API_URL = 'https://craftlocal-backend.onrender.com/api/products';
 
 const getId = (product) =>
   String(product?._id || product?.id || '');

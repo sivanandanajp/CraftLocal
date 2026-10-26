@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 
-const API_URL = 'http://localhost:5000/api/products';
+const API_URL = 'https://craftlocal-backend.onrender.com/api/products';
 const ITEMS_PER_PAGE = 8;
 const NEARBY_RADIUS_KM = 25;
 

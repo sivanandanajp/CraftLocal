@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api/products';
+const API_URL = 'https://craftlocal-backend.onrender.com/api/products';
 
 const getProductId = (product) => product._id || product.id;
 
